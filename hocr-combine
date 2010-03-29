@@ -1,18 +1,8 @@
 #!/usr/bin/python
 
-import sys,os,string,re
-import xml
-from xml.dom.ext.reader import HtmlLib
-from xml.xpath import Evaluate as xquery
-
-################################################################
-### library code
-################################################################
-
-def get_text(node):
-    textnodes = xquery(".//text()",node)
-    s = string.join([node.nodeValue for node in textnodes])
-    return re.sub(r'\s+',' ',s)
+import sys
+from copy import deepcopy
+from lxml.html import parse, tostring
 
 ################################################################
 ### main program
@@ -24,19 +14,15 @@ if len(sys.argv)<2:
     sys.exit(1)
 
 stream = open(sys.argv[1])
-doc = HtmlLib.Reader().fromString(open(sys.argv[1]).read())
+doc = parse(sys.argv[1])
 
-pages = xquery("//*[@class='ocr_page']",doc)
-container = pages[-1].parentNode
+pages = doc.getroot().find_class("ocr_page")
+container = pages[-1].getparent()
 
 for fname in sys.argv[2:]:
-    doc2 = HtmlLib.Reader().fromString(open(fname).read())
-    pages = xquery("//*[@class='ocr_page']",doc2)
+    doc2 = parse(fname).getroot()
+    pages = doc2.find_class("ocr_page")
     for page in pages:
-        page = doc.importNode(page,1)
-        container.appendChild(page)
+        container.append(deepcopy(page))
 
-xml.dom.ext.PrettyPrint(doc,sys.stdout)
-
-    
-    
+print tostring(doc, pretty_print=True)
