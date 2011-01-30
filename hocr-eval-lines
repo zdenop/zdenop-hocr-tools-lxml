@@ -3,29 +3,26 @@
 # compute statistics about the quality of the geometric segmentation
 # at the level of the given OCR element
 
-import sys,os,string,re,getopt
-import xml
-from xml.dom.ext.reader import HtmlLib
-from xml.xpath import Evaluate as xquery
-from pylab import array,zeros,reshape
+import sys,re,getopt
+from copy import deepcopy
+from lxml.html import parse, tostring
+from pylab import array,zeros #,reshape
 
 ################################################################
 ### misc library code
 ################################################################
 
 def assoc(key,list):
+    "Used for command line processing"
     for k,v in list:
         if k==key: return v
     return None
 
-def get_text(node):
-    textnodes = xquery(".//text()",node)
-    s = string.join([node.nodeValue for node in textnodes])
-    return re.sub(r'\s+',' ',s)
-
 simp_re = re.compile(r'[^a-zA-Z0-9.,!?:;]+')
 
 def normalize(s):
+    if not s:
+        return ""
     s = simp_re.sub(' ',s)
     s = s.strip()
     return s
@@ -64,35 +61,57 @@ optlist,args = getopt.getopt(sys.argv[1:],"v")
 
 verbose = (assoc('-v',optlist)=='')
 truth_lines = open(args[0]).read().split('\n')
-actual_doc = HtmlLib.Reader().fromString(open(args[1]).read())
-actual_lines = [get_text(node) for node in xquery("//*[@class='ocr_line']",actual_doc)]
 
+doc = parse(args[1])
+actual_lines = [node.text for node in doc.getroot().xpath("//*[@class='ocr_line']") ]
+
+# Remove exotic characters and remove any remaining "empty" strings
 truth_lines = [normalize(s) for s in truth_lines]
 truth_lines = [s for s in truth_lines if s!=""]
 actual_lines = [normalize(s) for s in actual_lines]
-actual_lines = [s for s in truth_lines if s!=""]
+actual_lines = [s for s in actual_lines if s!=""]
 
+# This is a pool of lines which get removed as we find best matches
 remaining = []+truth_lines
 ocr_errors = 0
+
+# Note: We probably should be sorting the actual lines by length first?
+# This "greedy" approach may be sub optimal...?
+# But we'd also like to keep them approximately in the order of the layout
+# so that when there are ties, they default to the "correct" one
+
+# For each recognized line, try to find the reference line that it is the
+# closest match to
+line_match_count = 0
 for actual_line in actual_lines:
-    min_d = 999999
-    min_i = -1
+    min_d = 999999 # Smallest distance found to far
+    min_i = -1     # Item with smallest distance
     for index in range(len(remaining)):
         true_line = remaining[index]
-        d = edit_distance(true_line,actual_line,min_d)
+        d = edit_distance(true_line,actual_line,min_d)        
         if d<min_d:
             min_d = d
             min_i = index
-    if verbose and min_d>0:
-        print "distance",min_d
-        print "\t"+actual_line
-        print "\t"+remaining[min_i]
-    assert min_i>=0
+    if min_i < 0: # if we're out of reference lines, then stop
+        break
+    #if verbose and min_d>0:
+    if verbose:
+        print "Ref:\t"+actual_line
+        print "Rec:\t"+remaining[min_i]
+        print "character edit distance %i"%min_d
+    #assert min_i>=0
+    # Remove the match from the pool of remaining reference transcripts
     del remaining[min_i]
     ocr_errors += min_d
 
+# Count how many characters are in the unmatched reference transcripts
 segmentation_errors = 0
 for s in remaining: segmentation_errors += len(s)
 
-print "segmentation_errors",segmentation_errors
-print "ocr_errors",ocr_errors
+unmatched_rec_lines = len(actual_lines) - line_match_count
+
+print "# of unmatched reference lines      %i"%len(remaining)
+print "# of unmatched recognized lines     %i"%unmatched_rec_lines
+print "# of characters in unmatched lines  %i"%segmentation_errors
+print "# of character errors:              %i"%ocr_errors
+
