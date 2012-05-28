@@ -75,8 +75,8 @@ doc = parse(stream)
 ################################################################
 
 # check for presence of meta information
-assert doc.xpath("//META[@name='ocr-id']")!=[]
-assert doc.xpath("//META[@name='ocr-recognized']")!=[]
+assert doc.xpath("//meta[@name='ocr-system']")!=[]
+assert doc.xpath("//meta[@name='ocr-capabilities']")!=[]
 
 # check for presence of page
 assert doc.xpath("//*[@class='ocr_page']")!=[]
