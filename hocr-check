@@ -60,12 +60,12 @@ def mostly_nonoverlapping(boxes,significant_overlap=0.2):
 ### main
 ################################################################
 
-if len(sys.argv)<1:
+if len(sys.argv)<2:
     print "usage:",sys.argv[0],"[-o] file.html"
     sys.exit(1)
 optlist,args = getopt.getopt(sys.argv[1:],"o")
 nooverlap = (assoc('-o',optlist)=='')
-if len(args)>0: stream = open(args[0])
+if len(args)>0: stream = args[0]
 elif len(args)>1: raise "can only check one file at a time"
 else: stream = sys.stdin
 doc = parse(stream)
