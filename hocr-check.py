@@ -40,7 +40,7 @@ def get_prop(node, name):
 
 def get_bbox(node):
     """
-    Get bbox
+    Get bounding box
     """
     bbox = get_prop(node, 'bbox')
     if not bbox:
@@ -103,6 +103,7 @@ def main():
     nooverlap = (assoc('-o', optlist) == '')
     if len(args) == 1:
         stream = args[0]
+        print "Checking '%s'...\n" % stream
     elif len(args) > 1:
         raise NameError("can only check one file at a time")
     else:
@@ -114,10 +115,102 @@ def main():
     ################################################################
 
     # check for presence of meta information
-    assert doc.xpath("//meta[@name='ocr-system']") != []
-    assert doc.xpath("//meta[@name='ocr-capabilities']") != []
+    metareq = set(['ocr-system', 'ocr-capabilities'])
+    metaopt = set(['ocr-langs', 'ocr-scripts', 'ocr-number-of-pages'])
+    langs = ('ab', 'aa', 'af', 'ak', 'sq', 'am', 'ar', 'an', 'hy', 'as', 'av',
+             'ae', 'ay', 'az', 'bm', 'ba', 'eu', 'be', 'bn', 'bh', 'bi', 'bjn',
+             'bs', 'br', 'bg', 'my', 'ca', 'ch', 'ce', 'ny', 'zh', 'cv', 'kw',
+             'co', 'cr', 'hr', 'cs', 'da', 'day', 'dv', 'nl', 'dz', 'en', 'eo',
+             'et', 'ee', 'fo', 'fj', 'fi', 'fr', 'ff', 'gl', 'ka', 'de', 'el',
+             'gn', 'gu', 'ht', 'ha', 'he', 'hz', 'hi', 'ho', 'hu', 'ia', 'id',
+             'ie', 'ga', 'ig', 'ik', 'io', 'is', 'it', 'iu', 'ja', 'jv', 'kl',
+             'kn', 'kr', 'ks', 'kk', 'km', 'ki', 'rw', 'ky', 'kv', 'kg', 'ko',
+             'ku', 'kj', 'la', 'lb', 'lg', 'li', 'ln', 'lo', 'lt', 'lu', 'lv',
+             'gv', 'mk', 'mg', 'ms', 'ml', 'mt', 'mi', 'mr', 'mh', 'mn', 'na',
+             'nv', 'nb', 'nd', 'ne', 'ng', 'nn', 'no', 'ii', 'nr', 'oc', 'oj',
+             'cu', 'om', 'or', 'os', 'pa', 'pi', 'fa', 'pl', 'ps', 'pt', 'qu',
+             'rm', 'rn', 'ro', 'ru', 'sa', 'sc', 'sd', 'se', 'sm', 'sg', 'sr',
+             'gd', 'sn', 'si', 'sk', 'sl', 'so', 'st', 'es', 'su', 'sw', 'ss',
+             'sv', 'ta', 'te', 'tg', 'th', 'ti', 'bo', 'tk', 'tl', 'tn', 'to',
+             'tr', 'ts', 'tt', 'tw', 'ty', 'ug', 'uk', 'ur', 'uz', 've', 'vi',
+             'vo', 'wa', 'cy', 'wo', 'fy', 'xh', 'yi', 'yo', 'za', 'zu',
+             'unknown')
 
-    # check for presence of page
+    scripts = ('Afak', 'Hluw', 'Arab', 'Armn', 'Avst', 'Bali', 'Bamu', 'Bass',
+               'Batk', 'Beng', 'Blis', 'Phlv', 'Bopo', 'Brah', 'Brai', 'Bugi',
+               'Buhd', 'Cari', 'Cakm', 'Cham', 'Cher', 'Cirt', 'Zinh', 'Zzzz',
+               'Zyyy', 'Zxxx', 'Copt', 'Xsux', 'Cprt', 'Cyrl', 'Cyrs', 'Dsrt',
+               'Deva', 'Dupl', 'Egyd', 'Egyh', 'Egyp', 'Elba', 'Ethi', 'Geor',
+               'Glag', 'Goth', 'Gran', 'Grek', 'Gujr', 'Guru', 'Hang', 'Hani',
+               'Hans', 'Hant', 'Hano', 'Hebr', 'Hira', 'Armi', 'Inds', 'Phli',
+               'Prti', 'Jpan', 'Hrkt', 'Java', 'Jurc', 'Kthi', 'Knda', 'Kana',
+               'Kali', 'Khar', 'Khmr', 'Khoj', 'Sind', 'Geok', 'Kore', 'Kpel',
+               'Laoo', 'Latf', 'Latg', 'Latn', 'Lepc', 'Limb', 'Lina', 'Linb',
+               'Lisu', 'Loma', 'Lyci', 'Lydi', 'Mlym', 'Mand', 'Mani', 'Zmth',
+               'Maya', 'Mtei', 'Mend', 'Merc', 'Mero', 'Plrd', 'Mong', 'Moon',
+               'Mroo', 'Mymr', 'Nbat', 'Nkgb', 'Talu', 'Nkoo', 'Nshu', 'Ogam',
+               'Olck', 'Hung', 'Ital', 'Narb', 'Perm', 'Xpeo', 'Sarb', 'Orkh',
+               'Orya', 'Osma', 'Hmng', 'Palm', 'Phag', 'Phnx', 'Phlp', 'Rjng',
+               'Qabx', 'Qaaa', 'Roro', 'Runr', 'Samr', 'Sara', 'Saur', 'Shrd',
+               'Shaw', 'Sgnw', 'Sinh', 'Sora', 'Sund', 'Sylo', 'Zsym', 'Syrn',
+               'Syre', 'Syrc', 'Syrj', 'Tglg', 'Tagb', 'Tale', 'Lana', 'Tavt',
+               'Takr', 'Taml', 'Tang', 'Telu', 'Teng', 'Thaa', 'Thai', 'Tibt',
+               'Tfng', 'Tirh', 'Ugar', 'Cans', 'Vaii', 'Visp', 'Wara', 'Wole',
+               'Yiii','unknown')
+
+    for metatag in metareq:
+        node = doc.find(".//meta[@name='%s']" % metatag)
+        if node is None:
+               raise NameError("FATAL ERROR: Can not find required " + \
+                            "meta tag '%s'!" % metatag)
+        else:
+            print "Found %s:" % metatag, node.attrib['content']
+
+    for metatag in metaopt:
+        node = doc.find(".//meta[@name='%s']" % metatag)
+        content = ""
+        if node is None:
+           print 'WARNING: Missing optional meta tag %s' % metatag
+        else:
+           content = node.attrib['content']
+        if metatag == 'ocr-langs' and content != "":
+            if content not in langs:
+                print "WARNING: Found tag '%s', but " % metatag + \
+                "'%s' is not ISO 639-1 code.\n" % content + \
+                "  Please check: " + \
+                "http://en.wikipedia.org/wiki/List_of_ISO_639-1_codes."
+            else:
+                 print "Found %s:" % metatag, content
+        elif metatag == 'ocr-scripts' and content != "":
+            if content not in scripts:
+                print "WARNING: Found tag '%s', but " % metatag + \
+                "'%s' is not ISO 15924 letter code.\n" % content + \
+                "  Please check: " + \
+                "http://unicode.org/iso15924/iso15924-en.html."
+            else:
+                 print "Found %s:" % metatag, content
+
+    #Logical Structuring Elements
+    lse = set(['ocr_document',
+                   'ocr_linear',
+                       'ocr_title',
+                       'ocr_author',
+                       'ocr_abstract',
+                       'ocr_part',  # [H1]
+                       'ocr_chapter',  # [H1]
+                           'ocr_section',
+                           'ocr_sub*section',  # [H3,H4]
+                               'ocr_display',
+                               'ocr_blockquote',  # [BLOCKQUOTE]
+                               'ocr_par'  # [P]
+                               ])
+    #Typesetting Related Elements
+    tre = set(['ocr_page',
+                   'ocr_carea',
+                   'ocr_separator',
+                   'ocr_noise'])
+
+    # check for presence of page - must be present
     assert doc.xpath("//*[@class='ocr_page']") != []
 
     # check that lines are inside pages
@@ -156,6 +249,7 @@ def main():
             column_bboxes = [get_bbox(obj) for obj in objs if get_prop(obj,
                 'bbox')]
             assert mostly_nonoverlapping(column_bboxes)
+    print "\nEnd of checks."
 
 if __name__ == '__main__':
     main()
@@ -166,7 +260,7 @@ if __name__ == '__main__':
 
 # FIXME add many other checks:
 # - containment of paragraphs, columns, etc.
-# - ocr-recognized vs. actual tags
+# - ocr-capabilities vs. actual tags
 # - warn about text outside ocr_ elements
 # - check title= attribute format
 # - check that only the right attributes are present on the right elements
